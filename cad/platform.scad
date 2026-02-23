@@ -1,112 +1,88 @@
 // =============================================================================
-// The Void -- Substrate Platform Module
+// The Void — Substrate Platform Module (Golden Ratio Cloche)
 // =============================================================================
+// Shallow disc that sits inside the base housing, supporting the mushroom
+// substrate block above the electronics cavity.
 //
-// A shallow dish that holds the substrate block inside the dome.
-// Sits on the base's internal support ledge at z=45mm.
+// Features:
+//   - 140mm diameter flat disc (3mm thick)
+//   - 6mm rim wall around perimeter (retains substrate)
+//   - 8 drainage ribs on underside at 45-deg spacing (elevates substrate)
+//   - 6 drain slots through floor at 60-deg spacing (moisture drainage)
+//   - Ribs and slots offset to avoid overlap
 //
-// Geometry:
-//   1. Base disc -- 140mm diameter, 2mm thick solid floor
-//   2. Rim wall -- 6mm above disc surface, 2mm thick perimeter wall
-//   3. Drain slots -- 6 radial slots (4mm x 20mm) cut through the floor
-//   4. Drainage ribs -- 8 small radial ridges (1mm tall, 1.5mm wide)
-//      on the floor between drain slots, elevating substrate for drainage
-//
-// The platform diameter (140mm) fits inside the base inner diameter (198mm)
-// with clearance, and rests on the 3mm wide ledge ring at z=45mm.
-//
-// Source: PRODUCT-SPEC.md Section 3 -- Substrate Platform
+// Public API:  substrate_platform()
+// Private:     _drainage_ribs(), _drain_slots()
 // =============================================================================
 
 include <parameters.scad>
 
-// -----------------------------------------------------------------------------
-// Derived platform constants
-// -----------------------------------------------------------------------------
+// === LOCAL CONSTANTS ===
+platform_r = platform_diameter / 2;   // 70mm
+platform_thickness = 3;               // mm — disc thickness
+rim_height = platform_rim_height;     // 6mm — from parameters.scad
+rim_width = 2;                        // mm — rim wall thickness
 
-_plat_r = platform_diameter / 2;        // 70 mm -- platform outer radius
-_plat_floor_h = 2;                      // mm -- floor disc thickness
-_plat_rim_h = platform_rim_height + _plat_floor_h;  // 8 mm -- total rim height
-_plat_rim_thickness = 2;                // mm -- rim wall thickness
+// Drainage ribs (additive, on underside)
+rib_count = 8;                        // 8 ribs at 45-deg spacing
+rib_height = 2;                       // mm — rib height below disc
+rib_width = 2;                        // mm — rib radial width
+rib_inner_r = 5;                      // mm — start radius (clear of center)
+rib_outer_r = platform_r - rim_width; // mm — stop before rim
 
-// Drain slot positioning
-// Slots start ~10mm inside the rim and extend toward center
-_drain_start_r = _plat_r - 10;         // 60 mm -- outer end of slot (near rim)
-_drain_end_r = _drain_start_r - drain_slot_length;  // 40 mm -- inner end of slot
+// Drain slots (subtractive, through floor)
+slot_count = 6;                       // 6 slots at 60-deg spacing
+slot_width = 3;                       // mm — slot width
+slot_length_frac = 0.80;             // slots extend to 80% of radius
+slot_outer_r = platform_r * slot_length_frac;  // ~56mm
+slot_inner_r = 5;                     // mm — start radius
 
-// Drainage rib parameters
-_rib_count = 8;                         // number of radial ribs
-_rib_height = 1;                        // mm -- raised above floor surface
-_rib_width = 1.5;                       // mm -- rib cross-section width
-_rib_inner_r = 10;                      // mm -- ribs start 10mm from center
-_rib_outer_r = _plat_r - _plat_rim_thickness - 2;  // mm -- stop 2mm before rim
-
-// =============================================================================
-// platform() -- Main substrate platform module
-// =============================================================================
-// Creates the shallow dish with rim, drain slots, and drainage ribs.
-// Origin at center of disc bottom surface.
-// =============================================================================
-
-module platform() {
-    difference() {
-        union() {
-            // 1. Base disc (solid floor)
-            cylinder(
-                h = _plat_floor_h,
-                r = _plat_r,
-                center = false
-            );
-
-            // 2. Rim wall (perimeter)
-            // A hollow cylinder extending above the disc surface
-            difference() {
-                cylinder(
-                    h = _plat_rim_h,
-                    r = _plat_r,
-                    center = false
-                );
-                translate([0, 0, -eps])
-                    cylinder(
-                        h = _plat_rim_h + 2 * eps,
-                        r = _plat_r - _plat_rim_thickness,
-                        center = false
-                    );
-            }
-
-            // 3. Drainage ribs (small radial ridges on floor surface)
-            // 8 ribs evenly spaced (45 deg apart), raised 1mm above the floor
-            // These elevate the substrate block so water flows underneath
-            // to the drain slots.
-            for (i = [0 : _rib_count - 1]) {
-                rotate([0, 0, i * (360 / _rib_count)])
-                    translate([(_rib_inner_r + _rib_outer_r) / 2, 0, _plat_floor_h + _rib_height / 2])
-                        cube(
-                            [_rib_outer_r - _rib_inner_r,
-                             _rib_width,
-                             _rib_height],
-                            center = true
-                        );
-            }
-        }
-
-        // 4. Drain slots (cut through the floor)
-        // 6 radial slots equally spaced (60 deg apart)
-        // Each is a rectangular cutout extending through the full floor thickness
-        for (i = [0 : drain_slot_count - 1]) {
-            rotate([0, 0, i * (360 / drain_slot_count)])
-                translate([(_drain_start_r + _drain_end_r) / 2, 0, _plat_floor_h / 2])
-                    cube(
-                        [drain_slot_length,
-                         drain_slot_width,
-                         _plat_floor_h + 2 * eps],
-                        center = true
-                    );
-        }
+// === PRIVATE: 8 radial drainage ribs ===
+// Ribs on underside of disc elevate the platform above the base floor,
+// creating airflow channels for moisture drainage.
+module _drainage_ribs() {
+    for (angle = [0 : 360/rib_count : 359]) {
+        rotate([0, 0, angle])
+            translate([rib_inner_r, -rib_width/2, 0])
+                cube([rib_outer_r - rib_inner_r, rib_width, rib_height]);
     }
 }
 
-// =============================================================================
-// Render when called directly
-// =============================================================================
-platform();
+// === PRIVATE: 6 radial drain slots ===
+// Slots cut through the disc floor for water drainage.
+// Offset from ribs by design (60-deg vs 45-deg spacing).
+module _drain_slots() {
+    for (angle = [0 : 360/slot_count : 359]) {
+        rotate([0, 0, angle])
+            translate([slot_inner_r, -slot_width/2, -epsilon])
+                cube([slot_outer_r - slot_inner_r, slot_width, platform_thickness + 2*epsilon]);
+    }
+}
+
+// === PUBLIC: Complete substrate platform ===
+// Flat disc with rim wall, underside drainage ribs, and through-floor drain slots.
+module substrate_platform() {
+    difference() {
+        union() {
+            // Main disc
+            cylinder(h = platform_thickness, r = platform_r);
+
+            // Rim wall around perimeter
+            difference() {
+                cylinder(h = platform_thickness + rim_height, r = platform_r);
+                translate([0, 0, -epsilon])
+                    cylinder(h = platform_thickness + rim_height + 2*epsilon, r = platform_r - rim_width);
+            }
+
+            // Drainage ribs on underside
+            translate([0, 0, -rib_height])
+                _drainage_ribs();
+        }
+
+        // Drain slots through floor
+        _drain_slots();
+    }
+}
+
+// === Standalone preview ===
+substrate_platform();

@@ -1,15 +1,7 @@
-// =============================================================================
-// The Void -- STL Export: Substrate Platform
-// =============================================================================
-// Renders platform() at high quality for STL export.
-// Print orientation: flat (natural, bottom surface on bed).
-// Output: void-platform.stl
-// OpenSCAD: File > Export > STL
-// =============================================================================
+// Export: Substrate Platform
+// Usage: Open in OpenSCAD -> Render (F6) -> Export STL (F7)
+$fn = 128;
+use <../platform.scad>;
+include <../parameters.scad>;
 
-include <../parameters.scad>
-use <../platform.scad>
-
-$fn = 128;  // High quality for export
-
-platform();
+substrate_platform();

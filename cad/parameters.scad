@@ -1,168 +1,96 @@
 // =============================================================================
-// The Void -- Parametric Constants Module
+// The Void — Parametric Constants (Golden Ratio Cloche)
 // =============================================================================
+// Every proportion derived from φ = 1.618 and the 8" dome diameter.
+// The same ratio found in nautilus shells, sunflower spirals,
+// and the mycelium branching patterns this dome nurtures.
 //
-// All dimensions for The Void mushroom cultivation dome.
-// Units: millimeters (mm) unless otherwise noted.
-// Source: PRODUCT-SPEC.md
-//
-// Usage: include <parameters.scad> in any module file.
+// Design lineage: D → R → arch → straight (×φ) → base (÷φ²)
 // =============================================================================
 
-// -----------------------------------------------------------------------------
-// Global Settings
-// -----------------------------------------------------------------------------
-
-// Render quality: set quality = "preview" for fast preview, "render" for final
-// From PRODUCT-SPEC.md OpenSCAD conventions
+// === GLOBAL ===
 quality = "preview";  // "preview" or "render"
 $fn = (quality == "render") ? 128 : 64;
 
-// FDM printing tolerance / clearance
-// Standard FDM tolerance for friction-fit parts
-fdm_tolerance = 0.2;  // mm -- default clearance for FDM printing
+phi = 1.6180339887;          // Golden ratio
+golden_angle = 137.507764;   // 360° / φ²
+fdm_tolerance = 0.2;         // mm — FDM print tolerance
+epsilon = 0.01;              // mm — CSG overlap
 
-// Small epsilon for boolean operations (prevents z-fighting)
-eps = 0.01;  // mm
+// === OVERALL DIMENSIONS ===
+D = 203;                     // 8" dome outer diameter (product spec, fixed)
+R = D / 2;                   // 101.5mm
+wall = 2.5;                  // mm — shell thickness
 
-// -----------------------------------------------------------------------------
-// Overall Dimensions
-// From PRODUCT-SPEC.md Section 1 -- Overall Dimensions
-// -----------------------------------------------------------------------------
+// === DOME SHELL ===
+// Derivation chain: R → arch_height → straight_height (×φ) → dome_height
+arch_height = R;                              // 101.5mm — semicircular cap
+straight_height = arch_height * phi;          // 164.2mm — φ × arch
+dome_height = straight_height + arch_height;  // 265.7mm — total dome
 
-total_diameter = 203;   // mm (8.0") -- widest point at dome-base junction
-total_height   = 254;   // mm (10.0") -- dome + base assembled
-dome_height    = 165;   // mm (6.5") -- from base top to dome apex
-base_height    = 89;    // mm (3.5") -- houses electronics, platform, airflow plenum
+// === BASE HOUSING ===
+// Derivation chain: R → base_h (÷φ²), wall → base_overhang (×φ)
+base_h = R / (phi * phi);      // 38.8mm — R/φ²
+base_overhang = wall * phi;     // 4.0mm — wall×φ
+base_floor = 3;                 // mm — floor thickness
+base_chamfer = 2;               // mm — bottom edge chamfer
+r_outer = R + base_overhang;    // 105.5mm — total base radius
 
-// -----------------------------------------------------------------------------
-// Dome Parameters
-// From PRODUCT-SPEC.md Section 2 -- Dome Shell
-// -----------------------------------------------------------------------------
+// === PLATFORM ===
+platform_diameter = 140;        // mm — growing platform
+platform_rim_height = 6;        // mm — rim around edge
+platform_z = base_floor + 2;    // mm — clearance above base floor
 
-dome_outer_diameter = 203;  // mm (8.0") -- matches total_diameter
-dome_inner_diameter = 190;  // mm (7.5") -- wall thickness reduces usable interior
-dome_wall_thickness = 2.0;  // mm -- structural integrity + light diffusion
+// === VOID CORE COMPONENTS ===
+// Port from Phase 10 — internal electronics layout unchanged by dome shape
 
-// Dome geometry breakdown
-dome_vertical_sidewall_height = 25;   // mm (1.0") -- straight-walled section at base
-dome_hemisphere_height        = 140;  // mm (dome_height - sidewall = 165 - 25)
-dome_apex_flat                = 10;   // mm -- flat at top for clean 3D print bridging
-
-// Derived dome radii
-dome_outer_radius = dome_outer_diameter / 2;  // 101.5 mm
-dome_inner_radius = dome_inner_diameter / 2;  // 95.0 mm
-
-// Exhaust vents (dome upper)
-// From PRODUCT-SPEC.md Section 4 -- Exhaust Vents
-exhaust_vent_diameter        = 12;   // mm (0.47") -- individual hole diameter
-exhaust_vent_count           = 4;    // quantity -- evenly spaced around circumference
-exhaust_vent_angle_from_apex = 60;   // degrees -- position in upper third of dome
-
-// Magnet pocket (dome seating lip)
-// From PRODUCT-SPEC.md Section 2 -- Magnetic reed switch integration
-magnet_pocket_diameter = 6.5;  // mm -- sized for 6mm neodymium disc magnet + clearance
-magnet_pocket_depth    = 2.5;  // mm -- depth into dome seating lip
-
-// Alignment notch (dome seating lip)
-// From PRODUCT-SPEC.md Section 2 -- Dome-to-Base Interface
-alignment_notch_width = 5;  // mm -- single notch for dome orientation
-alignment_notch_depth = 3;  // mm -- depth of rectangular cutout in seating lip
-
-// Seating lip
-// From PRODUCT-SPEC.md Section 2 -- Dome-to-Base Interface
-dome_seating_lip_height = 2.0;  // mm -- inward step at bottom edge of dome
-dome_seating_lip_inset  = 2.0;  // mm -- how far inward the lip steps
-
-// -----------------------------------------------------------------------------
-// Base Parameters
-// From PRODUCT-SPEC.md Section 3 -- Base Unit
-// -----------------------------------------------------------------------------
-
-base_outer_diameter = 203;  // mm (8.0") -- matches dome diameter for flush fit
-// base_height already defined above (89 mm)
-base_wall_thickness = 2.5;  // mm -- slightly thicker than dome for rigidity
-
-// Dome seating channel (base top rim)
-// From PRODUCT-SPEC.md Section 2 -- Dome-to-Base Interface
-dome_seating_channel_depth = 2.0;  // mm -- recessed channel in base top surface
-dome_seating_channel_width = 2.0;  // mm -- width of the seating groove
-
-// Silicone gasket groove
-// From PRODUCT-SPEC.md Section 2 -- silicone gasket ring in base channel
-gasket_groove_depth = 1.5;  // mm -- groove for silicone gasket ring
-gasket_groove_width = 2.0;  // mm -- width of gasket groove
-
-// Intake vents (base lower perimeter)
-// From PRODUCT-SPEC.md Section 4 -- Intake Vents
-intake_vent_width  = 15;  // mm (0.6") -- individual slot width
-intake_vent_height = 5;   // mm (0.2") -- individual slot height
-intake_vent_count  = 8;   // quantity -- evenly distributed around circumference
-
-// USB-C cutout (rear-center of base)
-// From PRODUCT-SPEC.md Section 10 -- Physical Connectors
-usb_cutout_width  = 9;    // mm -- rectangular cutout for USB-C receptacle
-usb_cutout_height = 3.5;  // mm -- height of USB-C cutout
-
-// Mode button cutout (front-center of base)
-// From PRODUCT-SPEC.md Section 10 -- Physical Controls
-button_cutout_diameter = 12;  // mm -- waterproof silicone-cap tactile switch
-
-// Red indicator LED hole
-// From PRODUCT-SPEC.md Section 10 -- Visual Indicators
-led_indicator_diameter = 3;  // mm -- 3mm through-hole LED
-
-// -----------------------------------------------------------------------------
-// Platform Parameters
-// From PRODUCT-SPEC.md Section 3 -- Substrate Platform
-// -----------------------------------------------------------------------------
-
-platform_diameter  = 140;  // mm (5.5") -- centered in base, sized for Void Pack
-platform_depth     = 13;   // mm (0.5") -- shallow recessed well
-platform_rim_height = 6;   // mm (0.25") -- raised lip prevents block sliding
-
-// Drain slots in platform
-// From PRODUCT-SPEC.md Section 3 -- Substrate Platform (4-6 drain slots)
-drain_slot_count  = 6;   // quantity
-drain_slot_width  = 4;   // mm
-drain_slot_length = 20;  // mm
-
-// -----------------------------------------------------------------------------
-// Void Core Additions
-// From PRODUCT-SPEC.md Section 8 -- Void Core Smart Electronics
-// -----------------------------------------------------------------------------
-
-// Raspberry Pi Zero W 2 dimensions
-pi_zero_width  = 30;  // mm -- board width
-pi_zero_length = 65;  // mm -- board length
+// Raspberry Pi Zero W 2
+pi_zero_width  = 30;   // mm
+pi_zero_length = 65;   // mm
 
 // 30mm axial fan
-// From PRODUCT-SPEC.md Section 4 -- Void Core Active Airflow
-fan_diameter = 30;  // mm -- 5V DC axial fan
-fan_depth    = 10;  // mm -- fan thickness
+fan_diameter = 30;      // mm
+fan_depth    = 10;      // mm
 
-// BME280 sensor breakout board
-// From PRODUCT-SPEC.md Section 8 -- BME280 sensor
-bme280_width  = 13;  // mm -- typical breakout board width
-bme280_length = 11;  // mm -- typical breakout board length
+// BME280 sensor breakout
+bme280_width  = 13;    // mm
+bme280_length = 11;    // mm
 
-// Piezoelectric humidifier reservoir
-// From PRODUCT-SPEC.md Section 5 -- Void Core Active Humidity
-humidifier_reservoir_diameter = 40;  // mm -- reservoir well diameter
-humidifier_reservoir_depth    = 25;  // mm -- reservoir well depth
+// Humidifier reservoir
+humidifier_reservoir_diameter = 40;  // mm
+humidifier_reservoir_depth    = 25;  // mm
 
-// Motorized damper servo
-// From PRODUCT-SPEC.md Section 8 -- Motorized damper
-servo_width  = 12;  // mm -- small servo width
-servo_length = 23;  // mm -- small servo length
+// Servo
+servo_width  = 12;     // mm
+servo_length = 23;     // mm
 
-// -----------------------------------------------------------------------------
-// Vent Cap Parameters
-// From PRODUCT-SPEC.md Section 4 -- Exhaust Vent Cover Design
-// From BUILD-GUIDE.md Section 2 -- void-vent-cap.stl
-// -----------------------------------------------------------------------------
+// Cable channel
+cable_channel_depth = 2;  // mm — preserves floor integrity
 
-vent_cap_outer_diameter  = 16;   // mm (exhaust_vent_diameter + 4mm lip)
-vent_cap_inner_diameter  = 12;   // mm -- matches exhaust vent hole diameter
-vent_cap_depth           = 4;    // mm -- depth of cap body
-vent_cap_snap_thickness  = 1.0;  // mm -- snap-fit tab thickness
+// === VENT SYSTEM ===
+vent_hole_diameter = 12;      // mm — exhaust vent holes
+vent_cap_flange = 16;         // mm — cap outer flange
+vent_cap_insert = 11.8;       // mm — 12 - 2×fdm_tolerance
+vent_cap_snap_protrusion = 1; // mm
+
+// === EASTER EGG ENGRAVING ===
+etch_depth = 0.8;       // mm
+line_width = 1.2;        // mm
+max_radius = R - 8;      // mm — pattern boundary
+
+// =============================================================================
+// PROPORTION SUMMARY
+// =============================================================================
+// Dome diameter:     203.0mm (8.0")
+// Straight walls:    164.2mm (φ × arch)
+// Arch cap:          101.5mm (R)
+// Total dome:        265.7mm (10.5")
+// Base height:        38.8mm (R/φ²)
+// Base overhang:       4.0mm (wall×φ)
+// Total height:      304.5mm (12.0")
+//
+// Golden ratios embedded:
+//   straight / arch  = φ     (1.618)
+//   base / arch      = 1/φ²  (0.382)
+//   overhang / wall  = φ     (1.618)
+// =============================================================================

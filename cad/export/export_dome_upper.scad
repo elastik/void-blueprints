@@ -1,15 +1,7 @@
-// =============================================================================
-// The Void -- STL Export: Upper Dome Half
-// =============================================================================
-// Renders dome_upper() at high quality for STL export.
-// Print orientation: apex-up (natural, stable hemisphere base).
-// Output: void-dome-upper.stl
-// OpenSCAD: File > Export > STL
-// =============================================================================
-
-include <../parameters.scad>
-use <../dome_split.scad>
-
-$fn = 128;  // High quality for export
+// Export: Upper Dome Section (Hemisphere Cap)
+// Usage: Open in OpenSCAD -> Render (F6) -> Export STL (F7)
+$fn = 128;
+use <../dome_split.scad>;
+include <../parameters.scad>;
 
 dome_upper();

@@ -1,14 +1,7 @@
-// =============================================================================
-// The Void -- STL Export: Full Dome Shell
-// =============================================================================
-// Renders dome_shell() at high quality for STL export.
-// Output: void-dome-full.stl
-// OpenSCAD: File > Export > STL
-// =============================================================================
+// Export: Full Cloche Dome
+// Usage: Open in OpenSCAD -> Render (F6) -> Export STL (F7)
+$fn = 128;
+use <../dome.scad>;
+include <../parameters.scad>;
 
-include <../parameters.scad>
-use <../dome.scad>
-
-$fn = 128;  // High quality for export
-
-dome_shell();
+void_dome();

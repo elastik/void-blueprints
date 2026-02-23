@@ -1,102 +1,77 @@
 // =============================================================================
-// The Void -- Full Assembly Visualization
+// The Void — Full Assembly Visualization (Golden Ratio Cloche)
 // =============================================================================
+// VISUALIZATION ONLY — do not export as STL. Use cad/export/ for individual parts.
 //
-// Combines all parts in their assembled positions for visual verification.
-// Color-coded with transparent dome to see internal components.
+// Color-coded assembly showing all components in correct relative positions.
+// Toggle between full dome and split dome views.
 //
-// Z-positioning:
-//   Base:     z = 0       (sits on ground plane)
-//   Platform: z = 45      (on internal support ledge)
-//   Dome:     z = 89      (base_height, sits on seating channel)
-//   Vent caps: on dome exhaust vent holes (60 deg from apex)
+// Color scheme:
+//   DimGray        — Base housing
+//   Gray           — Substrate platform
+//   DarkSlateGray  — Dome (70% opacity)
+//   LightSlateGray — Vent caps
 //
-// Toggle show_full_dome to switch between full and split dome views.
-//
-// NOTE: This file is for visualization only -- never export as STL.
-// Use the individual export files in cad/export/ for STL generation.
-//
-// Source: PRODUCT-SPEC.md, BUILD-GUIDE.md
+// Public API:  void_assembly(split = false)
 // =============================================================================
 
 include <parameters.scad>
 use <dome.scad>
+use <dome_split.scad>
 use <base.scad>
 use <platform.scad>
 use <vent_cap.scad>
-use <dome_split.scad>
 
-// -----------------------------------------------------------------------------
-// Assembly toggle
-// -----------------------------------------------------------------------------
+// === VENT CAP PLACEMENT ===
+// Positions 4 vent caps at the exhaust vent hole locations on the dome wall.
+// Vent holes are at 75% of straight_height, at 90-deg intervals (matching dome.scad).
+// Caps oriented flange outward, insert facing inward through wall.
+module _place_vent_caps() {
+    vent_z = straight_height * 0.75;
 
-// Set to true for full dome, false for split dome halves
-show_full_dome = true;
-
-// -----------------------------------------------------------------------------
-// Vent cap positioning (derived from dome geometry)
-// Same calculations as dome.scad exhaust_vent_holes()
-// -----------------------------------------------------------------------------
-
-// Hemisphere sphere radius and center
-_D_asm = dome_height - dome_vertical_sidewall_height;  // 140 mm
-_R_hemi_asm = (dome_outer_radius * dome_outer_radius + _D_asm * _D_asm) / (2 * _D_asm);
-// _R_hemi_asm ~= 106.794 mm
-
-_z_hemi_center_asm = dome_height - _R_hemi_asm;
-// _z_hemi_center_asm ~= 58.206 mm
-
-// Vent position on dome surface (polar angle 60 deg from apex)
-_z_vent = _z_hemi_center_asm + _R_hemi_asm * cos(exhaust_vent_angle_from_apex);
-_r_vent = _R_hemi_asm * sin(exhaust_vent_angle_from_apex);
-_surface_angle = exhaust_vent_angle_from_apex;  // 60 deg from vertical
-
-// =============================================================================
-// assembly() -- Full assembly visualization
-// =============================================================================
-
-module assembly() {
-    // ----- Base at origin -----
-    color("DimGray")
-        base_housing();
-
-    // ----- Platform on internal ledge -----
-    color("Gray")
-        translate([0, 0, 45])
-            platform();
-
-    // ----- Dome on top of base -----
-    if (show_full_dome) {
-        color("DarkSlateGray", 0.7)
-            translate([0, 0, base_height])
-                dome_shell();
-    } else {
-        // Split dome -- lower half in position, upper half in position
-        color("DarkSlateGray", 0.7)
-            translate([0, 0, base_height])
-                dome_lower();
-        color("SlateGray", 0.7)
-            translate([0, 0, base_height])
-                dome_upper();
+    for (angle = [0, 90, 180, 270]) {
+        rotate([0, 0, angle])
+            translate([R, 0, vent_z])
+                rotate([0, 90, 0])      // Rotate cap to face radially outward
+                    vent_cap();
     }
-
-    // ----- Vent caps in exhaust holes -----
-    // 4 vent caps positioned on the dome surface at the exhaust vent locations.
-    // Each cap is translated to the vent hole position on the dome (which is
-    // itself translated up by base_height), then rotated to match the surface
-    // normal at that point.
-    color("LightSlateGray")
-        for (i = [0 : exhaust_vent_count - 1]) {
-            rotate([0, 0, i * (360 / exhaust_vent_count)])
-                translate([0, 0, base_height])  // dome base offset
-                    translate([_r_vent, 0, _z_vent])  // vent position on dome
-                        rotate([0, _surface_angle, 0])  // align with surface normal
-                            rotate([180, 0, 0])  // flip so insert points inward into dome
-                                vent_cap();
-        }
 }
 
-// =============================================================================
-// Render assembly
-// =============================================================================
-assembly();
+// === PUBLIC: Full cloche assembly ===
+// Renders all components in correct positions with color coding.
+// split=true shows dome_lower() + dome_upper() instead of void_dome().
+module void_assembly(split = false) {
+    // Base at origin
+    color("DimGray")
+        void_base();
+
+    // Platform inside base (elevated above floor)
+    color("Gray")
+        translate([0, 0, platform_z])
+            substrate_platform();
+
+    // Dome on top of base
+    if (split) {
+        color("DarkSlateGray", 0.7)
+            translate([0, 0, base_h]) {
+                dome_lower();
+                dome_upper();
+            }
+    } else {
+        color("DarkSlateGray", 0.7)
+            translate([0, 0, base_h])
+                void_dome();
+    }
+
+    // Vent caps on dome wall
+    color("LightSlateGray")
+        translate([0, 0, base_h])
+            _place_vent_caps();
+}
+
+// === Standalone preview ===
+// Full assembly (default)
+void_assembly();
+
+// Uncomment for split dome view:
+// void_assembly(split = true);

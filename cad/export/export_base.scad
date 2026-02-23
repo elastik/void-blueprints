@@ -1,15 +1,7 @@
-// =============================================================================
-// The Void -- STL Export: Base Housing
-// =============================================================================
-// Renders base_housing() at high quality for STL export.
-// Print orientation: bottom-down (natural, stable base).
-// Output: void-base.stl
-// OpenSCAD: File > Export > STL
-// =============================================================================
+// Export: Base Housing
+// Usage: Open in OpenSCAD -> Render (F6) -> Export STL (F7)
+$fn = 128;
+use <../base.scad>;
+include <../parameters.scad>;
 
-include <../parameters.scad>
-use <../base.scad>
-
-$fn = 128;  // High quality for export
-
-base_housing();
+void_base();
