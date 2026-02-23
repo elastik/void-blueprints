@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Void Core</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#1a1a2e;color:#e0e0e0;min-height:100vh;padding:16px}
+h1{font-size:1.6em;color:#7b2ff7}
+.sub{font-size:.85em;color:#888;margin-top:2px}
+header{text-align:center;margin-bottom:20px;padding:12px}
+.grid{display:grid;grid-template-columns:1fr;gap:12px;max-width:720px;margin:0 auto}
+@media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr)}}
+.card{background:#16213e;border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.card-title{font-size:.75em;text-transform:uppercase;color:#888;letter-spacing:.5px;margin-bottom:6px}
+.big{font-size:2em;font-weight:700;color:#fff}
+.unit{font-size:.5em;color:#888;font-weight:400}
+.setpoint{font-size:.75em;color:#7b2ff7;margin-top:2px}
+.section{max-width:720px;margin:16px auto 0}
+.section-title{font-size:.9em;text-transform:uppercase;color:#7b2ff7;letter-spacing:1px;margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid #7b2ff733}
+.status-row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:8px}
+.status-item{display:flex;align-items:center;gap:8px;background:#16213e;border-radius:8px;padding:10px 14px;flex:1;min-width:140px}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dot-green{background:#00c853}
+.dot-red{background:#ff1744}
+.dot-gray{background:#555}
+.dot-pulse{background:#ff1744;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.bar-bg{flex:1;height:8px;background:#0f3460;border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;background:#7b2ff7;border-radius:4px;transition:width .3s}
+.mode-btns{display:flex;gap:8px;flex-wrap:wrap}
+.mode-btn{flex:1;min-width:70px;padding:10px 8px;border:2px solid #7b2ff7;background:transparent;color:#7b2ff7;border-radius:8px;cursor:pointer;font-size:.85em;font-weight:600;transition:all .2s}
+.mode-btn:hover{background:#7b2ff722}
+.mode-btn.active{background:#7b2ff7;color:#fff}
+.setting-row{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.setting-label{min-width:120px;font-size:.85em;color:#aaa}
+.setting-val{min-width:40px;text-align:right;font-size:.85em;font-weight:600}
+input[type=range]{flex:1;min-width:100px;accent-color:#7b2ff7}
+.toggle{position:relative;width:48px;height:26px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle .slider{position:absolute;inset:0;background:#333;border-radius:13px;transition:.3s}
+.toggle .slider:before{content:"";position:absolute;width:20px;height:20px;left:3px;bottom:3px;background:#888;border-radius:50%;transition:.3s}
+.toggle input:checked+.slider{background:#7b2ff7}
+.toggle input:checked+.slider:before{transform:translateX(22px);background:#fff}
+.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:.9em;font-weight:600;transition:all .2s}
+.btn-save{background:#7b2ff7;color:#fff}
+.btn-save:hover{background:#6a1de6}
+.btn-danger{background:#b71c1c;color:#fff;width:100%;padding:14px;font-size:1em;margin-top:8px}
+.btn-danger:hover{background:#d32f2f}
+.btn-danger:disabled{opacity:.4;cursor:not-allowed}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 20px;border-radius:8px;font-size:.85em;opacity:0;transition:opacity .3s;pointer-events:none;z-index:100}
+.toast.show{opacity:1}
+.toast.err{background:#b71c1c}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Void Core</h1>
+<div class="sub">v<span id="ver">--</span> &middot; Uptime: <span id="uptime">--</span></div>
+</header>
+
+<div class="grid">
+<div class="card">
+<div class="card-title">Temperature</div>
+<div class="big"><span id="temp">--</span><span class="unit"> &deg;C</span></div>
+</div>
+<div class="card">
+<div class="card-title">Humidity</div>
+<div class="big"><span id="hum">--</span><span class="unit"> % RH</span></div>
+<div class="setpoint">Setpoint: <span id="hum-sp">--</span>%</div>
+</div>
+<div class="card">
+<div class="card-title">Pressure</div>
+<div class="big"><span id="pres">--</span><span class="unit"> hPa</span></div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Status</div>
+<div class="status-row">
+<div class="status-item">
+<div class="dot" id="dome-dot"></div>
+<span>Dome: <strong id="dome-txt">--</strong></span>
+</div>
+<div class="status-item">
+<div class="dot" id="uvc-dot"></div>
+<span>UV-C: <strong id="uvc-txt">--</strong></span>
+</div>
+</div>
+<div class="status-row">
+<div class="status-item">
+<span style="font-size:.85em;color:#aaa;min-width:36px">Fan</span>
+<div class="bar-bg"><div class="bar-fill" id="fan-bar" style="width:0%"></div></div>
+<span style="font-size:.85em;min-width:32px;text-align:right" id="fan-pct">0%</span>
+</div>
+<div class="status-item">
+<div class="dot" id="hum-dot"></div>
+<span>Humidifier: <strong id="hum-txt">Off</strong></span>
+</div>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Light Mode</div>
+<div class="mode-btns">
+<button class="mode-btn" data-mode="void_glow">Void Glow</button>
+<button class="mode-btn" data-mode="uv_only">UV Only</button>
+<button class="mode-btn" data-mode="blue_only">Blue Only</button>
+<button class="mode-btn" data-mode="off">Off</button>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Climate Settings</div>
+<div class="setting-row">
+<span class="setting-label">Humidity Setpoint</span>
+<input type="range" id="sp-slider" min="80" max="95" step="1" value="88">
+<span class="setting-val" id="sp-val">88%</span>
+</div>
+<div class="setting-row">
+<span class="setting-label">Deadband</span>
+<input type="range" id="db-slider" min="1" max="5" step="0.5" value="2">
+<span class="setting-val" id="db-val">2.0%</span>
+</div>
+<div class="setting-row">
+<span class="setting-label">Fan Base Speed</span>
+<input type="range" id="fan-slider" min="0" max="100" step="1" value="20">
+<span class="setting-val" id="fan-val">20</span>
+</div>
+<div class="setting-row">
+<span class="setting-label">Auto Mode</span>
+<label class="toggle"><input type="checkbox" id="auto-toggle" checked><span class="slider"></span></label>
+<span style="flex:1"></span>
+<button class="btn btn-save" onclick="saveSettings()">Save</button>
+</div>
+</div>
+
+<div class="section">
+<div class="section-title">Sterilization</div>
+<button class="btn btn-danger" id="ster-btn" onclick="sterilize()">Start UV-C Sterilization</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var E=function(id){return document.getElementById(id)};
+var modeBtns=document.querySelectorAll('.mode-btn');
+var currentMode='';
+
+function fmt(s){var h=Math.floor(s/3600);var m=Math.floor((s%3600)/60);return h+'h '+m+'m'}
+
+function toast(msg,err){var t=E('toast');t.textContent=msg;t.className=err?'toast show err':'toast show';setTimeout(function(){t.className='toast'},2500)}
+
+function updateUI(d){
+E('ver').textContent=d.version||'--';
+E('uptime').textContent=fmt(d.uptime||0);
+E('temp').textContent=d.sensorValid?parseFloat(d.temperature).toFixed(1):'--';
+E('hum').textContent=d.sensorValid?parseFloat(d.humidity).toFixed(1):'--';
+E('pres').textContent=d.sensorValid?parseFloat(d.pressure).toFixed(0):'--';
+
+// Dome
+E('dome-dot').className=d.domeSeated?'dot dot-green':'dot dot-red';
+E('dome-txt').textContent=d.domeSeated?'Seated':'Removed';
+
+// UV-C
+if(d.uvcActive){
+E('uvc-dot').className='dot dot-pulse';
+var rm=Math.ceil(d.uvcRemainingMs/60000);
+E('uvc-txt').textContent='ACTIVE ('+rm+'m)';
+}else{
+E('uvc-dot').className='dot dot-gray';
+E('uvc-txt').textContent='Idle';
+}
+
+// Fan
+var fp=Math.round(d.fanSpeed/255*100);
+E('fan-bar').style.width=fp+'%';
+E('fan-pct').textContent=fp+'%';
+
+// Humidifier
+E('hum-dot').className=d.humidifierActive?'dot dot-green':'dot dot-gray';
+E('hum-txt').textContent=d.humidifierActive?'On':'Off';
+
+// Mode buttons
+if(d.lightMode!==currentMode){
+currentMode=d.lightMode;
+modeBtns.forEach(function(b){
+b.className=b.getAttribute('data-mode')===currentMode?'mode-btn active':'mode-btn';
+});
+}
+
+// Sterilize button
+E('ster-btn').disabled=!d.domeSeated||d.uvcActive;
+}
+
+function poll(){
+fetch('/status').then(function(r){return r.json()}).then(function(d){
+updateUI(d);
+// Update setpoint display from status
+if(d.climateAuto!==undefined){
+E('hum-sp').textContent=E('sp-slider').value;
+}
+}).catch(function(){})
+}
+
+function setMode(m){
+fetch('/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:m})}).then(function(r){return r.json()}).then(function(d){
+if(d.success){toast('Mode: '+m);currentMode=m;modeBtns.forEach(function(b){b.className=b.getAttribute('data-mode')===m?'mode-btn active':'mode-btn'})}
+else toast(d.error||'Error',true);
+}).catch(function(){toast('Request failed',true)})
+}
+
+modeBtns.forEach(function(b){b.addEventListener('click',function(){setMode(b.getAttribute('data-mode'))})});
+
+E('sp-slider').addEventListener('input',function(){E('sp-val').textContent=this.value+'%'});
+E('db-slider').addEventListener('input',function(){E('db-val').textContent=parseFloat(this.value).toFixed(1)+'%'});
+E('fan-slider').addEventListener('input',function(){E('fan-val').textContent=this.value});
+
+function saveSettings(){
+var body={
+humiditySetpoint:parseFloat(E('sp-slider').value),
+humidityDeadband:parseFloat(E('db-slider').value),
+fanBaseSpeed:parseInt(E('fan-slider').value),
+autoMode:E('auto-toggle').checked
+};
+fetch('/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json()}).then(function(d){
+if(d.success)toast('Settings saved');
+else toast(d.error||'Error',true);
+}).catch(function(){toast('Request failed',true)})
+}
+
+function sterilize(){
+if(!confirm('This will run UV-C for 15 minutes. Dome must be seated. Continue?'))return;
+fetch('/sterilize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:true})}).then(function(r){return r.json()}).then(function(d){
+if(d.success)toast('UV-C started ('+d.durationMinutes+' min)');
+else toast(d.error||'Error',true);
+}).catch(function(){toast('Request failed',true)})
+}
+
+// Load config on startup to populate settings
+fetch('/config').then(function(r){return r.json()}).then(function(d){
+if(d.climate){
+E('sp-slider').value=d.climate.humiditySetpoint;
+E('sp-val').textContent=d.climate.humiditySetpoint+'%';
+E('db-slider').value=d.climate.humidityDeadband;
+E('db-val').textContent=parseFloat(d.climate.humidityDeadband).toFixed(1)+'%';
+E('fan-slider').value=d.climate.fanBaseSpeed;
+E('fan-val').textContent=d.climate.fanBaseSpeed;
+E('auto-toggle').checked=d.climate.autoMode;
+}
+E('hum-sp').textContent=d.climate?d.climate.humiditySetpoint:'--';
+}).catch(function(){});
+
+setInterval(poll,2000);
+poll();
+</script>
+</body>
+</html>
